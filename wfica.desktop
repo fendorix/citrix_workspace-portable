@@ -8,4 +8,4 @@ NoDisplay=true
 MimeType=application/x-ica;
 Categories=Application;Network;X-Red-Hat-Base;X-SuSE-Core-Internet;
 Icon=/run/host/var/home/rafael/.local/share/icons/manager.png
-Exec="/opt/Citrix/ICAClient/wfica.sh %f"
+Exec=/opt/Citrix/ICAClient/wfica.sh %f
