@@ -1,4 +1,4 @@
-#!/bin/bash
+.#!/bin/bash
 
 # Script to create/recreate Citrix Workspace distrobox container
 # This script handles the complete setup process including building and container creation
@@ -59,13 +59,21 @@ remove_existing_container() {
 # Build the container image
 build_image() {
     local use_local=$1
+    local force_download=$2
     
     if [ "$use_local" = true ]; then
         print_info "Building local container image..."
+        
+        local build_args=""
+        if [ "$force_download" = true ]; then
+            print_warning "Forcing redownload of workspace app (cache busted)"
+            build_args="--build-arg FORCE_DOWNLOAD=$(date +%s)"
+        fi
+        
         if command -v podman &> /dev/null; then
-            podman build -t "${LOCAL_IMAGE}:latest" .
+            podman build $build_args -t "${LOCAL_IMAGE}:latest" .
         else
-            docker build -t "${LOCAL_IMAGE}:latest" .
+            docker build $build_args -t "${LOCAL_IMAGE}:latest" .
         fi
         print_info "Image built successfully"
     else
@@ -112,6 +120,7 @@ OPTIONS:
     -l, --local         Build image locally instead of using remote image
     -r, --rebuild       Force rebuild of the container (removes existing)
     -e, --export        Enter container and export application automatically
+    -f, --force-download Force redownload of Citrix workspace app (busts cache)
     --no-build          Skip image building (only recreate container)
 
 EXAMPLES:
@@ -120,6 +129,9 @@ EXAMPLES:
 
     # Rebuild container with local image
     $0 --local --rebuild
+
+    # Rebuild with forced workspace app redownload
+    $0 --local --rebuild --force-download
 
     # Recreate container without rebuilding image
     $0 --rebuild --no-build
@@ -133,6 +145,7 @@ main() {
     local rebuild=false
     local auto_export=false
     local no_build=false
+    local force_download=false
     
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
@@ -151,6 +164,10 @@ main() {
                 ;;
             -e|--export)
                 auto_export=true
+                shift
+                ;;
+            -f|--force-download)
+                force_download=true
                 shift
                 ;;
             --no-build)
@@ -178,7 +195,7 @@ main() {
     
     # Build image if needed
     if [ "$no_build" = false ] && [ "$use_local" = true ]; then
-        build_image "$use_local"
+        build_image "$use_local" "$force_download"
     fi
     
     # Create container

@@ -22,8 +22,12 @@ RUN apt-get update && \
     libnss3 && \
     rm -rf /var/lib/apt/lists/*
 
+# Build argument to force redownload of workspace app
+ARG FORCE_DOWNLOAD=0
+
 # Copying the Citrix ICA client .deb file and installing it.
 RUN cd /tmp && \
+    echo "Force download cache buster: ${FORCE_DOWNLOAD}" && \
     curl -LO https:$(curl -L https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html |grep icaclient|grep deb|grep amd64|awk -F 'rel="' '{print $2}' | awk -F '"' '{print $1}')
 
 RUN apt-get update && \
