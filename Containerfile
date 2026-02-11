@@ -39,6 +39,9 @@ RUN mkdir -p /home/citrix/.ICAClient && \
 # Copying .desktop files to a suitable directory, such as /usr/share/applications.
 COPY wfica.desktop /usr/share/applications/
 
+# Copy MIME type definition for .ica files
+COPY citrix-ica.xml /usr/share/mime/packages/
+
 # Creating symbolic links for various commands to the 'distrobox-host-exec'.
 RUN ln -fs /usr/bin/distrobox-host-exec /usr/local/bin/docker && \
     ln -fs /usr/bin/distrobox-host-exec /usr/local/bin/flatpak && \
