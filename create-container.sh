@@ -1,4 +1,4 @@
-.#!/bin/bash
+#!/bin/bash
 
 # Script to create/recreate Citrix Workspace distrobox container
 # This script handles the complete setup process including building and container creation
@@ -7,7 +7,7 @@ set -e
 
 # Configuration
 CONTAINER_NAME="citrix_workspace"
-IMAGE_NAME="quay.io/rafael_palomar/citrix_workspace-portable:latest"
+IMAGE_NAME="ghcr.io/fendorix/citrix_workspace-portable:latest"
 LOCAL_IMAGE="citrix_workspace-portable"
 
 # Color codes for output
@@ -76,9 +76,29 @@ build_image() {
             docker build $build_args -t "${LOCAL_IMAGE}:latest" .
         fi
         print_info "Image built successfully"
+        
+        # Tag with registry path for easy upload
+        print_info "Tagging image for registry: ${IMAGE_NAME}"
+        if command -v podman &> /dev/null; then
+            podman tag "${LOCAL_IMAGE}:latest" "${IMAGE_NAME}"
+        else
+            docker tag "${LOCAL_IMAGE}:latest" "${IMAGE_NAME}"
+        fi
+        print_info "Image tagged successfully. Ready to push to registry."
     else
         print_info "Skipping image build (using remote image: ${IMAGE_NAME})"
     fi
+}
+
+# Pull the latest image from registry
+pull_image() {
+    print_info "Pulling latest image from registry: ${IMAGE_NAME}"
+    if command -v podman &> /dev/null; then
+        podman pull "${IMAGE_NAME}"
+    else
+        docker pull "${IMAGE_NAME}"
+    fi
+    print_info "Image pulled successfully"
 }
 
 # Create the distrobox container
@@ -97,6 +117,9 @@ create_container() {
     
     distrobox create -i "${image_to_use}" -n "${CONTAINER_NAME}"
     
+    echo ""
+    print_info "To upload your image to the registry, run:"
+    echo "  podman push ${IMAGE_NAME}"
     print_info "Container created successfully"
 }
 
@@ -119,6 +142,7 @@ OPTIONS:
     -h, --help          Show this help message
     -l, --local         Build image locally instead of using remote image
     -r, --rebuild       Force rebuild of the container (removes existing)
+    -p, --pull          Pull latest version of remote image before creating
     -e, --export        Enter container and export application automatically
     -f, --force-download Force redownload of Citrix workspace app (busts cache)
     --no-build          Skip image building (only recreate container)
@@ -127,14 +151,20 @@ EXAMPLES:
     # Create container using remote image
     $0
 
+    # Recreate container from latest remote image
+    $0 --rebuild --pull
+
     # Rebuild container with local image
     $0 --local --rebuild
 
     # Rebuild with forced workspace app redownload
     $0 --local --rebuild --force-download
+    
+    # Rebuild and push to registry
+    $0 --local --rebuild && podman push ${IMAGE_NAME}
 
-    # Recreate container without rebuilding image
-    $0 --rebuild --no-build
+    # Recreate container without pulling (uses cached image)
+    $0 --rebuild
 
 EOF
 }
@@ -143,6 +173,7 @@ EOF
 main() {
     local use_local=false
     local rebuild=false
+    local pull=false
     local auto_export=false
     local no_build=false
     local force_download=false
@@ -160,6 +191,10 @@ main() {
                 ;;
             -r|--rebuild)
                 rebuild=true
+                shift
+                ;;
+            -p|--pull)
+                pull=true
                 shift
                 ;;
             -e|--export)
@@ -193,9 +228,14 @@ main() {
         remove_existing_container
     fi
     
-    # Build image if needed
-    if [ "$no_build" = false ] && [ "$use_local" = true ]; then
+    # Build image if needed (local mode)
+    if [ "$use_local" = true ] && [ "$no_build" = false ]; then
         build_image "$use_local" "$force_download"
+    fi
+    
+    # Pull latest image if requested (remote mode)
+    if [ "$pull" = true ] && [ "$use_local" = false ]; then
+        pull_image
     fi
     
     # Create container
