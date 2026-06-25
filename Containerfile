@@ -19,6 +19,8 @@ RUN apt-get update && \
     pulseaudio-utils \
     libcanberra-gtk3-module \
     curl \
+    gnome-keyring \
+    libwebkit2gtk-4.0-37 \
     libnss3 && \
     rm -rf /var/lib/apt/lists/*
 
